@@ -11,7 +11,7 @@ module.exports = defineConfig({
 	reporter: 'list',
 	outputDir: 'test-results',
 	use: {
-		baseURL: 'http://localhost:8000',
+		baseURL: process.env.BASE_URL || 'http://localhost:8000',
 		viewport: {width: 1600, height: 1200},
 		actionTimeout: 30000,
 		screenshot: 'only-on-failure',

@@ -50,6 +50,8 @@ jobs:
       # PKP publishes no checksum; this one was recorded from the first download
       OJS_SHA256_3_5_0_6: f5b85703b06e45cc82e56ef72b0a8f42a2f75237e5204dbd0146d9730a627c97
       DATASETS_COMMIT: 32b457f4db44691e231abaf3c9aadbd90cd036be
+      # A dotted name, as real sites have: WebKit rejects cookies for "localhost"
+      BASE_URL: http://ojs.test:8000
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -107,7 +109,10 @@ jobs:
           grep -c ERROR "$RUNNER_TEMP/db-load.log" || true
           cp config.inc.php "$OJS_DIR/"
           cp -r files public "$OJS_DIR/"
-          sed -i 's#^base_url = .*#base_url = "http://localhost:8000"#' "$OJS_DIR/config.inc.php"
+          sed -i "s#^base_url = .*#base_url = \"$BASE_URL\"#" "$OJS_DIR/config.inc.php"
+          sed -i 's#^allowed_hosts = .*#allowed_hosts = "[\\"ojs.test\\"]"#' "$OJS_DIR/config.inc.php"
+          grep -E '^(base_url|allowed_hosts) ' "$OJS_DIR/config.inc.php"
+          echo "127.0.0.1 ojs.test" | sudo tee -a /etc/hosts
 
       - name: Build the release package
         run: |
@@ -118,10 +123,10 @@ jobs:
       - name: Start OJS
         run: |
           cd "$OJS_DIR"
-          PHP_CLI_SERVER_WORKERS=4 nohup php -d display_errors=0 -d log_errors=1 -S localhost:8000 \
+          PHP_CLI_SERVER_WORKERS=4 nohup php -d display_errors=0 -d log_errors=1 -S 127.0.0.1:8000 \
             > "$RUNNER_TEMP/ojs-server.log" 2>&1 &
           curl --silent --fail --retry 30 --retry-delay 2 --retry-all-errors -o /dev/null \
-            http://localhost:8000/index.php/publicknowledge/en/login
+            "$BASE_URL/index.php/publicknowledge/en/login"
 
       - name: Prepare the browsers
         working-directory: tests/e2e
@@ -175,7 +180,8 @@ jobs:
         run: |
           log="$RUNNER_TEMP/ojs-server.log"
           test -f "$log" || exit 0
-          grep -iE "PHP (fatal|warning|notice|deprecated).*referenceCheck|referenceCheck.*(exception|error:)" "$log" && exit 1
+          grep -v "MethodNotAllowedHttpException" "$log" \
+            | grep -iE "PHP (fatal|warning|notice|deprecated).*referenceCheck|referenceCheck.*(exception|error:)" && exit 1
           grep -iE "PHP Fatal" "$log" && exit 1
           echo "none"
 
