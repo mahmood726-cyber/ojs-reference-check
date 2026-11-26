@@ -7,6 +7,10 @@ corrected, and for DOIs that do not resolve.
 **Status: in development. Not released and not in the PKP Plugin Gallery.**
 Earlier 3.5.0 releases lack the plugin API it uses; on those it shows nothing.
 
+Automated tests passed on 26 November 2026 on OJS 3.5.0-4, 3.5.0-5 and 3.5.0-6
+with PHP 8.2, 8.3 and 8.4 and with MariaDB, MySQL and PostgreSQL (not every
+combination), using PKP's test journal.
+
 ## What an editor sees
 Open a submission, go to **Publication > References**, and select **Check
 references**. The panel counts the results and lists the references that need a
