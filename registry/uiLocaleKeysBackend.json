@@ -3,6 +3,7 @@
 	"plugins.generic.referenceCheck.checked",
 	"plugins.generic.referenceCheck.checking",
 	"plugins.generic.referenceCheck.displayName",
+	"plugins.generic.referenceCheck.error",
 	"plugins.generic.referenceCheck.intro",
 	"plugins.generic.referenceCheck.limits",
 	"plugins.generic.referenceCheck.noReferences",
@@ -15,5 +16,6 @@
 	"plugins.generic.referenceCheck.status.no_notice",
 	"plugins.generic.referenceCheck.status.not_in_crossref",
 	"plugins.generic.referenceCheck.status.notice",
-	"plugins.generic.referenceCheck.status.retracted"
+	"plugins.generic.referenceCheck.status.retracted",
+	"plugins.generic.referenceCheck.status.unreadable_doi"
 ]

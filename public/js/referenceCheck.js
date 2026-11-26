@@ -15,6 +15,7 @@
 		'corrected',
 		'notice',
 		'doi_not_found',
+		'unreadable_doi',
 		'check_failed',
 		'not_in_crossref',
 	];
@@ -38,6 +39,8 @@
 		props: {
 			submissionId: {type: Number, required: true},
 			publicationId: {type: Number, required: true},
+			// The saved reference list, to notice when it changes
+			references: {type: String, default: ''},
 		},
 		setup(props) {
 			const {useLocalize} = pkp.modules.useLocalize;
@@ -53,21 +56,20 @@
 			);
 			const {data, fetch} = useFetch(apiUrl, {method: 'POST'});
 			const isChecking = ref(false);
-			const checkedPublicationId = ref(null);
+			// Which version and reference list the report on screen belongs to
+			const checked = ref(null);
+			const current = () => `${props.publicationId}\n${props.references}`;
 
-			// Never show one version's results against another
-			watch(
-				() => props.publicationId,
-				() => (checkedPublicationId.value = null),
-			);
+			// Never show results against another version or an edited list
+			watch(current, () => (checked.value = null));
 
 			async function check() {
-				const publicationId = props.publicationId;
+				const asked = current();
 				isChecking.value = true;
-				checkedPublicationId.value = null;
+				checked.value = null;
 				try {
 					await fetch();
-					checkedPublicationId.value = publicationId;
+					checked.value = asked;
 				} finally {
 					isChecking.value = false;
 				}
@@ -109,13 +111,13 @@
 
 			function results() {
 				const report = data.value;
-				if (
-					!report ||
-					checkedPublicationId.value !== props.publicationId
-				) {
+				if (!report || checked.value !== current()) {
 					return null;
 				}
-				if (!report.total) {
+				if (!Array.isArray(report.references) || !report.summary) {
+					return h('p', t('plugins.generic.referenceCheck.error'));
+				}
+				if (report.total === 0) {
 					return h('p', t('plugins.generic.referenceCheck.noReferences'));
 				}
 				const flagged = report.references
@@ -186,6 +188,7 @@
 					props: {
 						submissionId: args.submission.id,
 						publicationId: args.selectedPublication.id,
+						references: args.selectedPublication.citationsRaw || '',
 					},
 				},
 			];

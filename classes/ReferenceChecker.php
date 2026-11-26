@@ -44,9 +44,19 @@ class ReferenceChecker
                 $dois[] = ['doi' => $doi] + ($results[strtolower($doi)]
                     ?? ['status' => Status::CHECK_FAILED, 'notices' => []]);
             }
-            $status = $dois ? Status::mostUrgent(array_column($dois, 'status')) : Status::NO_DOI;
+            $statuses = array_column($dois, 'status');
+            if ($this->extractor->hasBrokenDoi($text)) {
+                $statuses[] = Status::UNREADABLE_DOI;
+            }
+            $status = $statuses ? Status::mostUrgent($statuses) : Status::NO_DOI;
             $summary[$status]++;
-            $report[] = ['number' => $index + 1, 'text' => $text, 'status' => $status, 'dois' => $dois];
+            $report[] = [
+                'number' => $index + 1,
+                // Invalid bytes would make the whole report impossible to encode
+                'text' => mb_scrub($text, 'UTF-8'),
+                'status' => $status,
+                'dois' => $dois,
+            ];
         }
 
         return [

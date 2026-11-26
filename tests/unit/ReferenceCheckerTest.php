@@ -111,7 +111,7 @@ class ReferenceCheckerTest extends TestCase
 
     public function testDoisAreBatchedAndRepeatsAskedOnce(): void
     {
-        $references = array_map(fn (int $i) => "10.1000/{$i}", range(1, 45));
+        $references = array_map(fn (int $i) => "10.1000/{$i}", range(1, 90));
         $references[] = '10.1000/1';
 
         $report = $this->checker(function (string $url) {
@@ -120,7 +120,53 @@ class ReferenceCheckerTest extends TestCase
         })->check($references);
 
         self::assertCount(3, $this->requests);
-        self::assertSame(46, $report['summary'][Status::NO_NOTICE]);
+        self::assertSame(91, $report['summary'][Status::NO_NOTICE]);
+    }
+
+    public static function registryAnswers(): array
+    {
+        return [
+            'registered elsewhere' => [['RA' => 'DataCite'], Status::NOT_IN_CROSSREF],
+            'does not exist' => [['status' => 'DOI does not exist'], Status::DOI_NOT_FOUND],
+            'invalid' => [['status' => 'Invalid DOI'], Status::DOI_NOT_FOUND],
+            'registry error' => [['status' => 'Error'], Status::CHECK_FAILED],
+            'unexpected body' => [['other' => true], Status::CHECK_FAILED],
+        ];
+    }
+
+    #[DataProvider('registryAnswers')]
+    public function testDoiNotReturnedByCrossref(array $answer, string $expected): void
+    {
+        $report = $this->checker(fn (string $url) => str_starts_with($url, DoiLookup::REGISTRIES)
+            ? self::json([['DOI' => '10.5281/ZENODO.1'] + $answer])
+            : self::batch())->check(['10.5281/zenodo.1']);
+
+        self::assertSame($expected, $report['references'][0]['status']);
+        self::assertCount(2, $this->requests);
+    }
+
+    public function testManyOtherRegistryDoisTakeFewRequests(): void
+    {
+        $references = array_map(fn (int $i) => "10.5281/zenodo.{$i}", range(1, 120));
+        $report = $this->checker(function (string $url) {
+            if (!str_starts_with($url, DoiLookup::REGISTRIES)) {
+                return self::batch();
+            }
+            $dois = explode(',', substr($url, strlen(DoiLookup::REGISTRIES)));
+            return self::json(array_map(fn ($doi) => ['DOI' => $doi, 'RA' => 'DataCite'], $dois));
+        })->check($references);
+
+        self::assertCount(6, $this->requests);
+        self::assertSame(120, $report['summary'][Status::NOT_IN_CROSSREF]);
+    }
+
+    public function testDoiLeftOutOfTheRegistryAnswerIsNotClean(): void
+    {
+        $report = $this->checker(fn (string $url) => str_starts_with($url, DoiLookup::REGISTRIES)
+            ? self::json([])
+            : self::batch())->check(['10.1000/a']);
+
+        self::assertSame(Status::CHECK_FAILED, $report['references'][0]['status']);
     }
 
     public static function handleAnswers(): array
@@ -135,14 +181,11 @@ class ReferenceCheckerTest extends TestCase
     }
 
     #[DataProvider('handleAnswers')]
-    public function testDoiUnknownToCrossref(int $status, array $body, string $expected): void
+    public function testDoiWithCommaUnknownToCrossref(int $status, array $body, string $expected): void
     {
-        $report = $this->checker(function (string $url) use ($status, $body) {
-            if (str_starts_with($url, DoiLookup::HANDLES)) {
-                return self::json($body, $status);
-            }
-            return str_contains($url, 'filter=') ? self::batch() : ['status' => 404, 'body' => 'Resource not found.'];
-        })->check(['10.5281/zenodo.1']);
+        $report = $this->checker(fn (string $url) => str_starts_with($url, DoiLookup::HANDLES)
+            ? self::json($body, $status)
+            : ['status' => 404, 'body' => 'Resource not found.'])->check(['https://doi.org/10.5281/a,b']);
 
         self::assertSame($expected, $report['references'][0]['status']);
     }
@@ -158,10 +201,14 @@ class ReferenceCheckerTest extends TestCase
 
     public function testRejectedBatchFallsBackToSingleLookups(): void
     {
-        $report = $this->checker(fn (string $url) => str_contains($url, 'filter=')
-            ? ['status' => 400, 'body' => '{}']
-            : self::json(['message' => self::work('10.1000/a', 'retraction')]))
-            ->check(['10.1000/a']);
+        $report = $this->checker(function (string $url) {
+            if (str_contains($url, 'filter=')) {
+                return ['status' => 400, 'body' => '{}'];
+            }
+            return str_starts_with($url, DoiLookup::REGISTRIES)
+                ? self::json([['DOI' => '10.1000/a', 'RA' => 'Crossref']])
+                : self::json(['message' => self::work('10.1000/a', 'retraction')]);
+        })->check(['10.1000/a']);
 
         self::assertSame(Status::RETRACTED, $report['references'][0]['status']);
     }
@@ -212,7 +259,7 @@ class ReferenceCheckerTest extends TestCase
         $clock = function () use (&$now) {
             return $now;
         };
-        $references = array_map(fn (int $i) => "10.1000/{$i}", range(1, 40));
+        $references = array_map(fn (int $i) => "10.1000/{$i}", range(1, 80));
 
         $report = $this->checker(function (string $url) use (&$now) {
             $now += 100;
@@ -220,8 +267,8 @@ class ReferenceCheckerTest extends TestCase
             return self::batch(...array_map(fn ($doi) => self::work($doi), $m[1]));
         }, 90, $clock)->check($references);
 
-        self::assertSame(20, $report['summary'][Status::NO_NOTICE]);
-        self::assertSame(20, $report['summary'][Status::CHECK_FAILED]);
+        self::assertSame(40, $report['summary'][Status::NO_NOTICE]);
+        self::assertSame(40, $report['summary'][Status::CHECK_FAILED]);
     }
 
     public function testDoisOverTheLimitAreReportedNotDropped(): void

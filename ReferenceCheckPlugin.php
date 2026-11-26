@@ -29,6 +29,11 @@ class ReferenceCheckPlugin extends GenericPlugin
             return $success;
         }
 
+        // Plugin API endpoints arrived in OJS 3.5.0-4. Without them, show nothing.
+        if (!method_exists(APIRouter::class, 'registerPluginApiControllers')) {
+            return $success;
+        }
+
         Hook::add('APIHandler::endpoints::plugin', function (string $hookName, APIRouter $apiRouter): bool {
             $apiRouter->registerPluginApiControllers([new ReferenceCheckController()]);
             return Hook::CONTINUE;

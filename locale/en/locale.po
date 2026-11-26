@@ -7,16 +7,19 @@ msgid "plugins.generic.referenceCheck.displayName"
 msgstr "Reference Check"
 
 msgid "plugins.generic.referenceCheck.description"
-msgstr "Lets editors check a reference list for retracted, flagged or corrected work and for DOIs that do not resolve. Adds a panel to the References section of the publication. Only the DOIs found in the references are sent to Crossref and doi.org."
+msgstr "Lets editors check a reference list for retracted, flagged or corrected work and for DOIs that do not resolve. Adds a panel to the References section of the publication. Only text read as a DOI in each reference is sent to Crossref and doi.org."
 
 msgid "plugins.generic.referenceCheck.intro"
-msgstr "Checks the saved reference list. Save any changes to the references first. Only DOIs are sent to Crossref and doi.org."
+msgstr "Checks the saved reference list. Save any changes to the references first. Only text read as a DOI is sent to Crossref and doi.org."
 
 msgid "plugins.generic.referenceCheck.check"
 msgstr "Check references"
 
 msgid "plugins.generic.referenceCheck.checking"
 msgstr "Checking..."
+
+msgid "plugins.generic.referenceCheck.error"
+msgstr "The check did not return a report, so nothing was checked."
 
 msgid "plugins.generic.referenceCheck.noReferences"
 msgstr "No references are saved for this version, so nothing was checked."
@@ -44,6 +47,9 @@ msgstr "Other update notice"
 
 msgid "plugins.generic.referenceCheck.status.doi_not_found"
 msgstr "DOI not found - check for a typing error"
+
+msgid "plugins.generic.referenceCheck.status.unreadable_doi"
+msgstr "A DOI here could not be read - check it by hand"
 
 msgid "plugins.generic.referenceCheck.status.check_failed"
 msgstr "Could not be checked - try again"

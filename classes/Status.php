@@ -20,6 +20,8 @@ class Status
     public const NOTICE = 'notice';
     public const DOI_NOT_FOUND = 'doi_not_found';
     public const CHECK_FAILED = 'check_failed';
+    /** Looks like a DOI, but is broken off or unfit to send */
+    public const UNREADABLE_DOI = 'unreadable_doi';
     public const NOT_IN_CROSSREF = 'not_in_crossref';
     public const NO_NOTICE = 'no_notice';
     public const NO_DOI = 'no_doi';
@@ -31,6 +33,7 @@ class Status
         self::CORRECTED,
         self::NOTICE,
         self::DOI_NOT_FOUND,
+        self::UNREADABLE_DOI,
         self::CHECK_FAILED,
         self::NOT_IN_CROSSREF,
         self::NO_NOTICE,

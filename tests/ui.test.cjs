@@ -96,7 +96,7 @@ const args = {
 		secondaryMenuItem: 'citations',
 	},
 	submission: {id: 5},
-	selectedPublication: {id: 7},
+	selectedPublication: {id: 7, citationsRaw: 'first'},
 };
 
 test('panel is added to the editorial references tab', () => {
@@ -107,6 +107,7 @@ test('panel is added to the editorial references tab', () => {
 	assert.strictEqual(items[1].component, 'ReferenceCheckPanel');
 	assert.strictEqual(items[1].props.submissionId, 5);
 	assert.strictEqual(items[1].props.publicationId, 7);
+	assert.strictEqual(items[1].props.references, 'first');
 });
 
 test('panel is not added elsewhere', () => {
@@ -177,4 +178,30 @@ test('a failed request shows no results', async () => {
 	});
 	await find(render(), 'PkpButton')[0].props.onClick();
 	assert.ok(!text(render()).includes('status.'));
+});
+
+test('saving a changed reference list removes the old results', async () => {
+	const response = {total: 0, summary: {}, references: []};
+	const {seen} = load({response});
+	const props = {submissionId: 5, publicationId: 7, references: 'first'};
+	const render = seen.components.ReferenceCheckPanel.setup(props);
+	await find(render(), 'PkpButton')[0].props.onClick();
+	assert.ok(text(render()).includes('referenceCheck.noReferences'));
+	props.references = 'first\nsecond';
+	assert.ok(!text(render()).includes('referenceCheck.noReferences'));
+});
+
+test('an unexpected answer is not read as an empty list', async () => {
+	for (const response of ['<html>proxy error</html>', {}, {total: 0}]) {
+		const {seen} = load({response});
+		const render = seen.components.ReferenceCheckPanel.setup({
+			submissionId: 5,
+			publicationId: 7,
+			references: '',
+		});
+		await find(render(), 'PkpButton')[0].props.onClick();
+		const shown = text(render());
+		assert.ok(shown.includes('referenceCheck.error'));
+		assert.ok(!shown.includes('referenceCheck.noReferences'));
+	}
 });

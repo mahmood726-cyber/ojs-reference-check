@@ -21,9 +21,18 @@ class DoiLookup
 {
     public const CROSSREF = 'https://api.crossref.org/works';
     public const HANDLES = 'https://doi.org/api/handles/';
+    /** Says which registry holds each of several DOIs */
+    public const REGISTRIES = 'https://doi.org/ra/';
 
-    private const BATCH_SIZE = 20;
+    private const BATCH_SIZE = 40;
+    /** Crossref allows one filtered query, but several single records, each second */
+    private const BATCH_PAUSE_SECONDS = 1.1;
     private const PAUSE_SECONDS = 0.25;
+    /** Longer strings are taken to be something other than a DOI */
+    private const MAX_DOI_LENGTH = 512;
+    /** A title that publishers mark when a work is retracted or withdrawn */
+    private const TITLE_MARKER = '#^\s*(?:(?:retracted(?:\s+article)?|withdrawn)\s*(?::|\x{2013}|\x{2014}|\s-\s)'
+        . '|\[(?:retracted|withdrawn)\])|\((?:retracted|withdrawn)\)\s*$#iu';
     private const RETRY_SECONDS = 2.0;
     /** Stop sending requests after this many failures in a row */
     private const MAX_FAILURES_IN_A_ROW = 3;
@@ -55,11 +64,14 @@ class DoiLookup
 
         $results = [];
         $single = [];
+        $unanswered = [];
 
         // A comma separates filter values, so such DOIs cannot be batched
         $batchable = [];
         foreach ($dois as $doi) {
-            if (str_contains($doi, ',')) {
+            if (!$this->maySend($doi)) {
+                $results[strtolower($doi)] = $this->result(Status::UNREADABLE_DOI);
+            } elseif (str_contains($doi, ',')) {
                 $single[] = $doi;
             } else {
                 $batchable[] = $doi;
@@ -68,7 +80,10 @@ class DoiLookup
 
         foreach (array_chunk($batchable, self::BATCH_SIZE) as $chunk) {
             $filter = implode(',', array_map(fn (string $doi) => 'doi:' . rawurlencode($doi), $chunk));
-            $response = $this->request(self::CROSSREF . "?filter={$filter}&select=DOI,updated-by&rows=" . count($chunk));
+            $response = $this->request(
+                self::CROSSREF . "?filter={$filter}&select=DOI,updated-by,title&rows=" . count($chunk),
+                self::BATCH_PAUSE_SECONDS
+            );
 
             if ($response === null) {
                 foreach ($chunk as $doi) {
@@ -84,12 +99,24 @@ class DoiLookup
                     $found[strtolower($item['DOI'])] = $this->fromRecord($item);
                 }
             }
-            // Whatever the batch did not answer is asked for one at a time
             foreach ($chunk as $doi) {
                 if (isset($found[strtolower($doi)])) {
                     $results[strtolower($doi)] = $found[strtolower($doi)];
                 } else {
+                    $unanswered[] = $doi;
+                }
+            }
+        }
+
+        // Find out, many at a time, who holds the DOIs Crossref did not return
+        foreach (array_chunk($unanswered, self::BATCH_SIZE) as $chunk) {
+            $registries = $this->registries($chunk);
+            foreach ($chunk as $doi) {
+                $answer = $registries[strtolower($doi)] ?? null;
+                if ($answer === 'Crossref') {
                     $single[] = $doi;
+                } else {
+                    $results[strtolower($doi)] = $this->result($answer ?? Status::CHECK_FAILED);
                 }
             }
         }
@@ -99,6 +126,57 @@ class DoiLookup
         }
 
         return $results;
+    }
+
+    /**
+     * Refuse strings that could carry something else off the server, or that
+     * would be read as a different address.
+     */
+    private function maySend(string $doi): bool
+    {
+        return strlen($doi) <= self::MAX_DOI_LENGTH
+            // Path segments "." and ".." would be resolved away
+            && !preg_match('#(?:^|/)\.{1,2}(?=/|$)#', $doi)
+            // An e-mail address written against the DOI
+            && !preg_match('/@[\w\-]+\.[A-Za-z]{2,}/', $doi);
+    }
+
+    /**
+     * @param string[] $dois None containing a comma
+     *
+     * @return array<string, string> For each DOI answered, keyed in lower case:
+     *   "Crossref" or the status that settles it
+     */
+    private function registries(array $dois): array
+    {
+        $path = implode(',', array_map($this->encodePath(...), $dois));
+        $response = $this->request(self::REGISTRIES . $path);
+        if ($response === null || $response['status'] !== 200) {
+            return [];
+        }
+
+        $answers = [];
+        foreach ($this->decode($response['body']) as $entry) {
+            if (!is_array($entry) || !is_string($entry['DOI'] ?? null)) {
+                continue;
+            }
+            $registry = $entry['RA'] ?? null;
+            $problem = $entry['status'] ?? null;
+            if (is_string($registry) && $registry !== '') {
+                $answer = $registry === 'Crossref' ? $registry : Status::NOT_IN_CROSSREF;
+            } elseif (in_array($problem, ['DOI does not exist', 'Invalid DOI'], true)) {
+                $answer = Status::DOI_NOT_FOUND;
+            } else {
+                continue;
+            }
+            $answers[strtolower($entry['DOI'])] = $answer;
+        }
+        return $answers;
+    }
+
+    private function encodePath(string $doi): string
+    {
+        return str_replace('%2F', '/', rawurlencode($doi));
     }
 
     private function lookupOne(string $doi): array
@@ -118,7 +196,7 @@ class DoiLookup
         }
 
         // Unknown to Crossref: is it registered anywhere?
-        $response = $this->request(self::HANDLES . str_replace('%2F', '/', rawurlencode($doi)) . '?type=URL');
+        $response = $this->request(self::HANDLES . $this->encodePath($doi) . '?type=URL');
         $code = $response === null ? null : ($this->decode($response['body'])['responseCode'] ?? null);
 
         return $this->result(match ($code) {
@@ -149,6 +227,21 @@ class DoiLookup
             ];
         }
 
+        $title = is_array($record['title'] ?? null) ? ($record['title'][0] ?? null) : null;
+        if (
+            is_string($title)
+            && !in_array(Status::RETRACTED, array_column($notices, 'status'), true)
+            && preg_match(self::TITLE_MARKER, $title)
+        ) {
+            $notices[] = [
+                'type' => 'title marked as retracted or withdrawn',
+                'status' => Status::RETRACTED,
+                'doi' => null,
+                'date' => null,
+                'source' => 'Crossref title',
+            ];
+        }
+
         return $this->result(
             $notices ? Status::mostUrgent(array_column($notices, 'status')) : Status::NO_NOTICE,
             $notices
@@ -158,19 +251,24 @@ class DoiLookup
     /**
      * @return ?array{status: int, body: string} Null when no usable answer could be had
      */
-    private function request(string $url): ?array
+    private function request(string $url, float $pause = self::PAUSE_SECONDS): ?array
     {
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             if ($this->failuresInARow >= self::MAX_FAILURES_IN_A_ROW || ($this->clock)() >= $this->deadline) {
                 return null;
             }
-            ($this->pause)($attempt === 1 ? self::PAUSE_SECONDS : self::RETRY_SECONDS);
+            ($this->pause)($attempt === 1 ? $pause : self::RETRY_SECONDS);
 
             try {
                 $response = $this->http->get($url);
                 // Rate limits and server errors are worth one more try
                 if ($response['status'] !== 429 && $response['status'] < 500) {
-                    $this->failuresInARow = 0;
+                    // Other refusals, such as 403, count towards giving up
+                    if (in_array($response['status'], [200, 400, 404], true)) {
+                        $this->failuresInARow = 0;
+                    } else {
+                        $this->failuresInARow++;
+                    }
                     return $response;
                 }
             } catch (Throwable $e) {
