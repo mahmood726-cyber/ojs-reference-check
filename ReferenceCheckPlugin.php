@@ -1,0 +1,61 @@
+<?php
+
+/**
+ * @file ReferenceCheckPlugin.php
+ *
+ * Copyright (c) 2026 Mahmood Ahmad
+ * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
+ *
+ * @class ReferenceCheckPlugin
+ * @brief Lets editors check a reference list for retracted, corrected and unresolvable work.
+ */
+
+namespace APP\plugins\generic\referenceCheck;
+
+use APP\core\Application;
+use APP\template\TemplateManager;
+use PKP\core\APIRouter;
+use PKP\plugins\GenericPlugin;
+use PKP\plugins\Hook;
+
+class ReferenceCheckPlugin extends GenericPlugin
+{
+    /** @copydoc GenericPlugin::register() */
+    public function register($category, $path, $mainContextId = null): bool
+    {
+        $success = parent::register($category, $path, $mainContextId);
+
+        if (!$success || Application::isUnderMaintenance() || !$this->getEnabled($mainContextId)) {
+            return $success;
+        }
+
+        Hook::add('APIHandler::endpoints::plugin', function (string $hookName, APIRouter $apiRouter): bool {
+            $apiRouter->registerPluginApiControllers([new ReferenceCheckController()]);
+            return Hook::CONTINUE;
+        });
+
+        $request = Application::get()->getRequest();
+        TemplateManager::getManager($request)->addJavaScript(
+            'referenceCheck',
+            "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/js/referenceCheck.js",
+            [
+                'contexts' => ['backend'],
+                'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
+            ]
+        );
+
+        return $success;
+    }
+
+    /** @copydoc Plugin::getDisplayName() */
+    public function getDisplayName(): string
+    {
+        return __('plugins.generic.referenceCheck.displayName');
+    }
+
+    /** @copydoc Plugin::getDescription() */
+    public function getDescription(): string
+    {
+        return __('plugins.generic.referenceCheck.description');
+    }
+}

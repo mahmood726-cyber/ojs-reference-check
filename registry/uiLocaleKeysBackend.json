@@ -1,0 +1,18 @@
+[
+	"plugins.generic.referenceCheck.check",
+	"plugins.generic.referenceCheck.checked",
+	"plugins.generic.referenceCheck.checking",
+	"plugins.generic.referenceCheck.displayName",
+	"plugins.generic.referenceCheck.intro",
+	"plugins.generic.referenceCheck.limits",
+	"plugins.generic.referenceCheck.noReferences",
+	"plugins.generic.referenceCheck.status.check_failed",
+	"plugins.generic.referenceCheck.status.concern",
+	"plugins.generic.referenceCheck.status.corrected",
+	"plugins.generic.referenceCheck.status.doi_not_found",
+	"plugins.generic.referenceCheck.status.no_doi",
+	"plugins.generic.referenceCheck.status.no_notice",
+	"plugins.generic.referenceCheck.status.not_in_crossref",
+	"plugins.generic.referenceCheck.status.notice",
+	"plugins.generic.referenceCheck.status.retracted"
+]

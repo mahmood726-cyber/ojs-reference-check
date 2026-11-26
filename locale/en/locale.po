@@ -1,0 +1,55 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "plugins.generic.referenceCheck.displayName"
+msgstr "Reference Check"
+
+msgid "plugins.generic.referenceCheck.description"
+msgstr "Lets editors check a reference list for retracted, flagged or corrected work and for DOIs that do not resolve. Adds a panel to the References section of the publication. Only the DOIs found in the references are sent to Crossref and doi.org."
+
+msgid "plugins.generic.referenceCheck.intro"
+msgstr "Checks the saved reference list. Save any changes to the references first. Only DOIs are sent to Crossref and doi.org."
+
+msgid "plugins.generic.referenceCheck.check"
+msgstr "Check references"
+
+msgid "plugins.generic.referenceCheck.checking"
+msgstr "Checking..."
+
+msgid "plugins.generic.referenceCheck.noReferences"
+msgstr "No references are saved for this version, so nothing was checked."
+
+msgid "plugins.generic.referenceCheck.checked"
+msgstr "References checked: {$total}. Time of check (UTC): {$date}"
+
+msgid "plugins.generic.referenceCheck.limits"
+msgstr "This is an aid, not a verdict. \"No notice found\" means only that Crossref held no update notice when asked. References without a DOI were not checked."
+
+msgid "plugins.generic.referenceCheck.status.retracted"
+msgstr "Retracted, withdrawn or removed"
+
+msgid "plugins.generic.referenceCheck.status.concern"
+msgstr "Expression of concern"
+
+msgid "plugins.generic.referenceCheck.status.corrected"
+msgstr "Correction published"
+
+msgid "plugins.generic.referenceCheck.status.notice"
+msgstr "Other update notice"
+
+msgid "plugins.generic.referenceCheck.status.doi_not_found"
+msgstr "DOI not found - check for a typing error"
+
+msgid "plugins.generic.referenceCheck.status.check_failed"
+msgstr "Could not be checked - try again"
+
+msgid "plugins.generic.referenceCheck.status.not_in_crossref"
+msgstr "DOI exists outside Crossref - retraction status not checked"
+
+msgid "plugins.generic.referenceCheck.status.no_notice"
+msgstr "No notice found"
+
+msgid "plugins.generic.referenceCheck.status.no_doi"
+msgstr "No DOI - not checked"
