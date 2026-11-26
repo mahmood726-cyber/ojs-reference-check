@@ -35,14 +35,15 @@ class ReferenceCheckPlugin extends GenericPlugin
         });
 
         $request = Application::get()->getRequest();
-        TemplateManager::getManager($request)->addJavaScript(
-            'referenceCheck',
-            "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/js/referenceCheck.js",
-            [
-                'contexts' => ['backend'],
-                'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
-            ]
-        );
+        $templateManager = TemplateManager::getManager($request);
+        $assets = "{$request->getBaseUrl()}/{$this->getPluginPath()}/public";
+        $templateManager->addJavaScript('referenceCheck', "{$assets}/js/referenceCheck.js", [
+            'contexts' => ['backend'],
+            'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
+        ]);
+        $templateManager->addStyleSheet('referenceCheck', "{$assets}/css/referenceCheck.css", [
+            'contexts' => ['backend'],
+        ]);
 
         return $success;
     }

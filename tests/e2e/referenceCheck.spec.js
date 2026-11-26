@@ -105,6 +105,11 @@ test('an editor saves references and checks them', async ({browser}) => {
 	const listed = panel.locator('ol > li');
 	await expect(listed).toHaveCount(2);
 	await expect(listed.first()).toContainText('Wakefield');
+	// Each is identified by its position in the saved list
+	await expect(listed.first()).toContainText('Reference 1: Retracted');
+	await expect(listed.nth(1)).toContainText('Reference 3: DOI not found');
+	// The style sheet is loaded
+	await expect(listed.first()).toHaveCSS('border-left-style', 'solid');
 	await expect(panel.locator('ol')).not.toContainText('Kucsko');
 	await expect(
 		panel.locator(

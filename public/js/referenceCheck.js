@@ -84,8 +84,12 @@
 			}
 
 			function referenceItem(reference) {
-				return h('li', {key: reference.number, value: reference.number}, [
-					h('strong', statusLabel(reference.status)),
+				return h('li', {key: reference.number, 'data-status': reference.status}, [
+					// OJS hides list numbers, so the position is written out
+					h(
+						'strong',
+						`${t('plugins.generic.referenceCheck.reference', {number: reference.number})}: ${statusLabel(reference.status)}`,
+					),
 					h('div', reference.text),
 					h(
 						'ul',

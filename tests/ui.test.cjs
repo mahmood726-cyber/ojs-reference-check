@@ -157,6 +157,7 @@ test('results list the most urgent first and hide clean references', async () =>
 	const shown = text(render());
 	assert.ok(shown.indexOf('reference-3') < shown.indexOf('reference-2'));
 	assert.ok(!shown.includes('reference-1'));
+	assert.ok(shown.includes('plugins.generic.referenceCheck.reference:'));
 	assert.ok(shown.includes('plugins.generic.referenceCheck.limits'));
 	assert.strictEqual(
 		find(render(), 'a')[0].props.href,

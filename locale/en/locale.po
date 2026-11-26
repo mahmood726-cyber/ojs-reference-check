@@ -24,6 +24,9 @@ msgstr "No references are saved for this version, so nothing was checked."
 msgid "plugins.generic.referenceCheck.checked"
 msgstr "References checked: {$total}. Time of check (UTC): {$date}"
 
+msgid "plugins.generic.referenceCheck.reference"
+msgstr "Reference {$number}"
+
 msgid "plugins.generic.referenceCheck.limits"
 msgstr "This is an aid, not a verdict. \"No notice found\" means only that Crossref held no update notice when asked. References without a DOI were not checked."
 

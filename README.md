@@ -4,8 +4,9 @@ An Open Journal Systems 3.5 plugin that lets editors check a submission's
 reference list, before publication, for work that has been retracted, flagged or
 corrected, and for DOIs that do not resolve.
 
-**Status: in development. Not yet tested inside a running OJS site, not
-released, and not in the PKP Plugin Gallery.**
+**Status: in development. Not released and not in the PKP Plugin Gallery.**
+Automated tests run it in OJS 3.5.0-6 with MariaDB, on PHP 8.2 and 8.3.
+PostgreSQL and MySQL have not been tested.
 
 ## What an editor sees
 Open a submission, go to **Publication > References**, and select **Check
