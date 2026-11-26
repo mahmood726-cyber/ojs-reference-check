@@ -242,10 +242,18 @@ test('the API requires the CSRF token', async ({browser}) => {
 	await context.close();
 });
 
-test('the API refuses other methods', async ({browser}) => {
+test('the API refuses other methods, as OJS does', async ({browser}) => {
 	const {context, page} = await signIn(browser, 'dbarnes');
 	await page.goto(dashboard);
-	expect([404, 405]).toContain((await page.request.get(OWN)).status());
+	const ours = await page.request.get(OWN);
+	// A POST-only endpoint of OJS itself, for comparison
+	const core = await page.request.get(
+		`${JOURNAL}/api/v1/submissions/1/publications/1/version`,
+	);
+	console.log(`GET on a POST-only endpoint: OJS ${core.status()}`);
+	expect(ours.ok()).toBe(false);
+	expect(ours.status()).toBe(core.status());
+	expect(await ours.text()).not.toContain('"references"');
 	await context.close();
 });
 
