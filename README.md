@@ -4,7 +4,7 @@ An Open Journal Systems plugin (OJS 3.5.0-4 or later) that lets editors check a 
 reference list, before publication, for work that has been retracted, flagged or
 corrected, and for DOIs that do not resolve.
 
-**Status: in development. Not released and not in the PKP Plugin Gallery.**
+**Version 1.0.0.0. Not yet in the PKP Plugin Gallery.**
 Earlier 3.5.0 releases lack the plugin API it uses; on those it shows nothing.
 
 Automated tests passed on 26 November 2026 on OJS 3.5.0-4, 3.5.0-5 and 3.5.0-6
@@ -91,15 +91,18 @@ To build a release package:
 ```bash
 git archive --format=tar.gz --prefix=referenceCheck/ -o referenceCheck-1.0.0.0.tar.gz HEAD
 ```
-To install a package by hand, unpack it into `plugins/generic/` and enable
-**Reference Check** under **Website > Plugins**.
+To install it, download the package from
+[Releases](https://github.com/mahmood726-cyber/ojs-reference-check/releases).
+A site administrator can then use **Website > Plugins > Upload A New Plugin**,
+or unpack it into `plugins/generic/`. Enable **Reference Check** in the plugin
+list.
 
 ## AI disclosure
 This plugin was developed with generative AI (Anthropic's Claude, through Claude
 Code), which wrote the code, tests and documentation under the maintainer's
-direction. **Human review of the code is still pending** and is required before
-any submission to PKP, in line with the
-[PKP policy on AI contributions](https://pkp.sfu.ca/pkp-policy-ai/).
+direction. The maintainer, Mahmood Ahmad, reviewed and approved it on
+26 November 2026, as the
+[PKP policy on AI contributions](https://pkp.sfu.ca/pkp-policy-ai/) asks.
 
 ## Licence
 GNU General Public License v3.0. See [LICENSE](LICENSE).
