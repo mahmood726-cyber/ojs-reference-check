@@ -33,7 +33,11 @@ class DoiLookup
     /** A title that publishers mark when a work is retracted or withdrawn */
     private const TITLE_MARKER = '#^\s*(?:(?:retracted(?:\s+article)?|withdrawn)\s*(?::|\x{2013}|\x{2014}|\s-\s)'
         . '|\[(?:retracted|withdrawn)\])|\((?:retracted|withdrawn)\)\s*$#iu';
+    /** Waits grow by this much with each further attempt */
     private const RETRY_SECONDS = 2.0;
+    /** A rate limit usually passes, for instance when two editors check at once */
+    private const ATTEMPTS_WHEN_RATE_LIMITED = 4;
+    private const ATTEMPTS_AFTER_OTHER_FAILURES = 2;
     /** Stop sending requests after this many failures in a row */
     private const MAX_FAILURES_IN_A_ROW = 3;
 
@@ -253,26 +257,34 @@ class DoiLookup
      */
     private function request(string $url, float $pause = self::PAUSE_SECONDS): ?array
     {
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
-            if ($this->failuresInARow >= self::MAX_FAILURES_IN_A_ROW || ($this->clock)() >= $this->deadline) {
-                return null;
+        $attempts = self::ATTEMPTS_AFTER_OTHER_FAILURES;
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            $wait = $attempt === 1 ? $pause : self::RETRY_SECONDS * ($attempt - 1);
+            // Do not start a wait that would run past the time allowed
+            if (
+                $this->failuresInARow >= self::MAX_FAILURES_IN_A_ROW
+                || ($this->clock)() + ($attempt === 1 ? 0 : $wait) >= $this->deadline
+            ) {
+                break;
             }
-            ($this->pause)($attempt === 1 ? $pause : self::RETRY_SECONDS);
+            ($this->pause)($wait);
 
             try {
                 $response = $this->http->get($url);
-                // Rate limits and server errors are worth one more try
-                if ($response['status'] !== 429 && $response['status'] < 500) {
-                    // Other refusals, such as 403, count towards giving up
-                    if (in_array($response['status'], [200, 400, 404], true)) {
-                        $this->failuresInARow = 0;
-                    } else {
-                        $this->failuresInARow++;
-                    }
-                    return $response;
-                }
             } catch (Throwable $e) {
                 error_log('referenceCheck: request failed: ' . $e->getMessage());
+                continue;
+            }
+            if ($response['status'] === 429) {
+                $attempts = self::ATTEMPTS_WHEN_RATE_LIMITED;
+            } elseif ($response['status'] < 500) {
+                // Other refusals, such as 403, count towards giving up
+                if (in_array($response['status'], [200, 400, 404], true)) {
+                    $this->failuresInARow = 0;
+                } else {
+                    $this->failuresInARow++;
+                }
+                return $response;
             }
         }
         $this->failuresInARow++;

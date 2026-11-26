@@ -212,6 +212,25 @@ class HostileInputTest extends TestCase
         self::assertSame(200, $report['summary'][Status::CHECK_FAILED]);
     }
 
+    public function testRateLimitIsWaitedOutWithGrowingPauses(): void
+    {
+        $calls = 0;
+        $report = $this->checker(function () use (&$calls) {
+            return ++$calls < 4 ? ['status' => 429, 'body' => ''] : self::batch(self::record('10.1000/a'));
+        })->check(['10.1000/a']);
+
+        self::assertSame(Status::NO_NOTICE, $report['references'][0]['status']);
+        self::assertSame([1.1, 2.0, 4.0, 6.0], $this->pauses);
+    }
+
+    public function testEndlessRateLimitIsGivenUp(): void
+    {
+        $report = $this->checker(fn () => ['status' => 429, 'body' => ''])->check(['10.1000/a']);
+
+        self::assertCount(4, $this->requests);
+        self::assertSame(Status::CHECK_FAILED, $report['references'][0]['status']);
+    }
+
     public function testReportCanAlwaysBeEncoded(): void
     {
         $report = $this->checker(fn () => self::batch())->check(["bad \xB1\x31 bytes"]);

@@ -269,6 +269,9 @@ for (const engine of [firefox, webkit]) {
 				baseURL,
 				viewport: {width: 1600, height: 1200},
 			});
+			// Leaving the dashboard while it still loads makes WebKit report the
+			// cancelled requests of OJS as errors
+			await page.waitForLoadState('networkidle');
 			await page.goto(workflow(2));
 			const {panel} = await runCheck(page);
 			await expect(panel).toContainText('Reference 1: Retracted');
