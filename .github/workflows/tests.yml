@@ -27,6 +27,39 @@ jobs:
           phpunit --bootstrap tests/bootstrap.php --do-not-cache-result \
             --coverage-text --coverage-filter classes --display-warnings --fail-on-warning tests/unit
 
+  # Static analysis and PKP's coding style, against the OJS release
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      OJS_SHA256: f5b85703b06e45cc82e56ef72b0a8f42a2f75237e5204dbd0146d9730a627c97
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, mbstring, xml
+          tools: phpstan, php-cs-fixer
+      - uses: actions/cache@v4
+        id: ojs-cache
+        with:
+          path: ojs.tar.gz
+          key: ojs-3.5.0-6
+      - name: Download OJS
+        if: steps.ojs-cache.outputs.cache-hit != 'true'
+        run: curl -sSfL --retry 3 -o ojs.tar.gz "https://pkp.sfu.ca/ojs/download/ojs-3.5.0-6.tar.gz"
+      - name: Unpack OJS
+        run: |
+          echo "${OJS_SHA256}  ojs.tar.gz" | sha256sum --check
+          mkdir "$RUNNER_TEMP/ojs"
+          tar -xzf ojs.tar.gz -C "$RUNNER_TEMP/ojs" --strip-components=1
+          echo "OJS_DIR=$RUNNER_TEMP/ojs" >> "$GITHUB_ENV"
+      - name: Static analysis (PHPStan)
+        run: phpstan analyse --configuration tests/phpstan.neon --no-progress
+      - name: PKP coding style
+        if: always()
+        run: php-cs-fixer fix --config tests/php-cs-fixer.php --dry-run --diff --allow-risky=yes
+
   # The release package installed in a real OJS with PKP's test journal
   ojs:
     name: OJS ${{ matrix.ojs }}, PHP ${{ matrix.php }}, ${{ matrix.db }}
@@ -38,7 +71,7 @@ jobs:
       matrix:
         include:
           - {ojs: 3.5.0-6, php: '8.2', db: mariadb}
-          - {ojs: 3.5.0-6, php: '8.3', db: mariadb, analyse: true}
+          - {ojs: 3.5.0-6, php: '8.3', db: mariadb}
           - {ojs: 3.5.0-6, php: '8.4', db: mariadb}
           - {ojs: 3.5.0-6, php: '8.3', db: mysql}
           - {ojs: 3.5.0-6, php: '8.2', db: pgsql}
@@ -58,7 +91,6 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: bcmath, curl, gd, intl, mbstring, mysqli, pdo_mysql, pgsql, pdo_pgsql, xml, zip
-          tools: ${{ matrix.analyse && 'phpstan, php-cs-fixer' || 'none' }}
 
       - uses: actions/cache@v4
         id: ojs-cache
@@ -166,14 +198,6 @@ jobs:
         if: ${{ matrix.unsupported }}
         working-directory: tests/e2e
         run: npx playwright test unsupported.spec.js --output=test-results/unsupported
-
-      - name: Static analysis (PHPStan)
-        if: ${{ matrix.analyse }}
-        run: phpstan analyse --configuration tests/phpstan.neon --no-progress
-
-      - name: PKP coding style
-        if: ${{ matrix.analyse }}
-        run: php-cs-fixer fix --config tests/php-cs-fixer.php --dry-run --diff --allow-risky=yes
 
       - name: No plugin errors in the server log
         if: always()

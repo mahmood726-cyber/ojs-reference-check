@@ -66,6 +66,9 @@ async function saveReferences(page, publication, references) {
 /** Press the button and return the panel and the report behind it */
 async function runCheck(page) {
 	const panel = page.locator('.referenceCheckPanel');
+	// OJS loads the References form after the page, moving the panel down
+	await expect(page.locator('textarea[name="citationsRaw"]')).toBeVisible();
+	await page.waitForLoadState('networkidle');
 	const answered = page.waitForResponse(
 		(r) => r.url().includes('/referenceCheck/'),
 		{timeout: 120000},
