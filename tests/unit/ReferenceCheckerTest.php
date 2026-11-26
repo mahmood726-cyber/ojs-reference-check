@@ -20,7 +20,9 @@ class ReferenceCheckerTest extends TestCase
     {
         $this->requests = [];
         $http = new class ($respond, $this->requests) implements HttpFetcher {
-            public function __construct(private Closure $respond, private array &$requests) {}
+            public function __construct(private Closure $respond, private array &$requests)
+            {
+            }
 
             public function get(string $url): array
             {

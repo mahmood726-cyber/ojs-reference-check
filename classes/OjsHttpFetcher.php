@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class OjsHttpFetcher
+ *
  * @brief Network access through the OJS HTTP client, so its proxy settings apply.
  */
 
@@ -18,7 +19,9 @@ class OjsHttpFetcher implements HttpFetcher
 {
     private const USER_AGENT = 'OJSReferenceCheck/1.0';
 
-    public function __construct(private ClientInterface $client) {}
+    public function __construct(private ClientInterface $client)
+    {
+    }
 
     /** @copydoc HttpFetcher::get() */
     public function get(string $url): array

@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class ReferenceCheckController
+ *
  * @brief API endpoint: check the saved references of one publication.
  */
 
@@ -20,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
+use PKP\citation\CitationDAO;
 use PKP\core\PKPBaseController;
 use PKP\core\PKPRequest;
 use PKP\db\DAORegistry;
@@ -62,6 +64,7 @@ class ReferenceCheckController extends PKPBaseController
 
     public function authorize(PKPRequest $request, array &$args, array $roleAssignments): bool
     {
+        /** @var \APP\core\Request $request */
         $this->addPolicy(new UserRolesRequiredPolicy($request), true);
         $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));
         // Also requires access to the submission, and that it owns the publication
@@ -74,7 +77,9 @@ class ReferenceCheckController extends PKPBaseController
     {
         $publication = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_PUBLICATION);
 
-        $references = DAORegistry::getDAO('CitationDAO')
+        /** @var CitationDAO $citationDao */
+        $citationDao = DAORegistry::getDAO('CitationDAO');
+        $references = $citationDao
             ->getRawCitationsByPublicationId($publication->getId())
             ->values()
             ->all();

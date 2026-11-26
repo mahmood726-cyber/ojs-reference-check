@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class ReferenceChecker
+ *
  * @brief Turn a reference list into a report.
  */
 
@@ -20,7 +21,8 @@ class ReferenceChecker
     public function __construct(
         private DoiLookup $lookup,
         private DoiExtractor $extractor = new DoiExtractor()
-    ) {}
+    ) {
+    }
 
     /**
      * @param string[] $references One reference per entry, in list order

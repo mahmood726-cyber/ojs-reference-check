@@ -276,7 +276,11 @@ for (const engine of [firefox, webkit]) {
 			const {panel} = await runCheck(page);
 			await expect(panel).toContainText('Reference 1: Retracted');
 			await panel.screenshot({path: `screenshots/panel-${engine.name()}.png`});
-			expect(errors).toEqual([]);
+			// WebKit reports requests that OJS's own dashboard abandons on
+			// leaving it. Only that message is set aside.
+			const abandoned =
+				/^Fetch API cannot load \S+\/api\/v1\/_submissions\/\S+ due to access control checks/;
+			expect(errors.filter((error) => !abandoned.test(error))).toEqual([]);
 		} finally {
 			await other.close();
 		}

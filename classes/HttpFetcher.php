@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @interface HttpFetcher
+ *
  * @brief The one network operation the checker needs.
  */
 

@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class DoiLookup
+ *
  * @brief Ask Crossref, and failing that doi.org, about a set of DOIs.
  *
  * Anything that cannot be established is reported as CHECK_FAILED.

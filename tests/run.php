@@ -13,7 +13,9 @@ namespace PHPUnit\Framework\Attributes {
         #[\Attribute(\Attribute::TARGET_METHOD)]
         class DataProvider
         {
-            public function __construct(public string $method) {}
+            public function __construct(public string $method)
+            {
+            }
         }
     }
 }

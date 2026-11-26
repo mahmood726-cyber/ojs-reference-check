@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class ReferenceCheckPlugin
+ *
  * @brief Lets editors check a reference list for retracted, corrected and unresolvable work.
  */
 
@@ -30,6 +31,8 @@ class ReferenceCheckPlugin extends GenericPlugin
         }
 
         // Plugin API endpoints arrived in OJS 3.5.0-4. Without them, show nothing.
+        // (Analysis of a newer release sees only that the method exists.)
+        // @phpstan-ignore function.alreadyNarrowedType
         if (!method_exists(APIRouter::class, 'registerPluginApiControllers')) {
             return $success;
         }

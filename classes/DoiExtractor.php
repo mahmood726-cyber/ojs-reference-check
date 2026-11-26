@@ -7,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file LICENSE.
  *
  * @class DoiExtractor
+ *
  * @brief Find the DOIs written in a free-text reference.
  *
  * The text is written by authors, so every step takes time in proportion to its
