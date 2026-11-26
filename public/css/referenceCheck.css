@@ -13,6 +13,11 @@
 	padding: 0;
 }
 
+/* Links must not be told apart from text by colour alone */
+.referenceCheckPanel a {
+	text-decoration: underline;
+}
+
 /* One block for each reference that needs attention */
 .referenceCheckPanel ol > li {
 	border-left: 0.25rem solid #8a6d00;
