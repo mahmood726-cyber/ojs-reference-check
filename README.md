@@ -11,10 +11,20 @@ Automated tests passed on 26 November 2026 on OJS 3.5.0-4, 3.5.0-5 and 3.5.0-6
 with PHP 8.2, 8.3 and 8.4 and with MariaDB, MySQL and PostgreSQL (not every
 combination), using PKP's test journal.
 
+## Requirements and configuration
+- OJS 3.5.0-4 or later.
+- No server software beyond what OJS requires, and no third-party account.
+- The server must be able to reach `api.crossref.org` and `doi.org` over HTTPS.
+  The proxy settings of OJS apply.
+- There is nothing to configure: enable the plugin, and make sure the References
+  field is enabled for the journal.
+
 ## What an editor sees
 Open a submission, go to **Publication > References**, and select **Check
 references**. The panel counts the results and lists the references that need a
 look, with a link to each notice.
+
+![The Reference Check panel](docs/screenshot.png)
 
 | Result | Meaning |
 |---|---|
@@ -103,6 +113,10 @@ Code), which wrote the code, tests and documentation under the maintainer's
 direction. The maintainer, Mahmood Ahmad, reviewed and approved it on
 26 November 2026, as the
 [PKP policy on AI contributions](https://pkp.sfu.ca/pkp-policy-ai/) asks.
+
+## Security
+Please report security problems privately, through
+[GitHub's private vulnerability reporting](https://github.com/mahmood726-cyber/ojs-reference-check/security/advisories/new).
 
 ## Licence
 GNU General Public License v3.0. See [LICENSE](LICENSE).
