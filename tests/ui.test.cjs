@@ -147,7 +147,11 @@ test('results list the most urgent first and hide clean references', async () =>
 			],
 		},
 	});
-	const props = {submissionId: 5, publicationId: 7};
+	const props = {
+		submissionId: 5,
+		publicationId: 7,
+		references: 'reference-1\nreference-2\nreference-3',
+	};
 	const render = seen.components.ReferenceCheckPanel.setup(props);
 
 	assert.ok(!text(render()).includes('reference-'));
@@ -180,15 +184,40 @@ test('a failed request shows no results', async () => {
 	assert.ok(!text(render()).includes('status.'));
 });
 
-test('saving a changed reference list removes the old results', async () => {
-	const response = {total: 0, summary: {}, references: []};
-	const {seen} = load({response});
-	const props = {submissionId: 5, publicationId: 7, references: 'first'};
+const oneReference = {
+	checkedAt: '2026-11-26T00:00:00Z',
+	total: 1,
+	summary: {retracted: 1},
+	references: [{number: 1, status: 'retracted', text: 'A study', dois: []}],
+};
+
+async function checkedPanel(references) {
+	const {seen} = load({response: oneReference});
+	const props = {submissionId: 5, publicationId: 7, references};
 	const render = seen.components.ReferenceCheckPanel.setup(props);
 	await find(render(), 'PkpButton')[0].props.onClick();
-	assert.ok(text(render()).includes('referenceCheck.noReferences'));
-	props.references = 'first\nsecond';
-	assert.ok(!text(render()).includes('referenceCheck.noReferences'));
+	return {props, render};
+}
+
+test('a changed reference list replaces the results with a notice', async () => {
+	const {props, render} = await checkedPanel('A study');
+	assert.ok(text(render()).includes('A study'));
+	props.references = 'A study\nAnother';
+	const shown = text(render());
+	assert.ok(shown.includes('referenceCheck.stale'));
+	assert.ok(!shown.includes('A study'));
+});
+
+test('results appear once the page catches up with a save', async () => {
+	const {props, render} = await checkedPanel('The list before the save');
+	assert.ok(text(render()).includes('referenceCheck.stale'));
+	props.references = 'A study';
+	assert.ok(text(render()).includes('A study'));
+});
+
+test('differences in spacing do not count as a change', async () => {
+	const {render} = await checkedPanel('  A\tstudy \r\n');
+	assert.ok(!text(render()).includes('referenceCheck.stale'));
 });
 
 test('an unexpected answer is not read as an empty list', async () => {

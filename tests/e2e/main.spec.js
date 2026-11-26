@@ -101,6 +101,7 @@ test('saving a changed list removes the old results', async ({browser}) => {
 	await expect(panel).toContainText('References checked: 4.');
 
 	await saveReferences(page, 3, REFERENCES.slice(1));
+	await expect(panel).toContainText('differs from the one checked');
 	await expect(panel).not.toContainText('References checked');
 	await expect(panel.locator('ol')).toHaveCount(0);
 

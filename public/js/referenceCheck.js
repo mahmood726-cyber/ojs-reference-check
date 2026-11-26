@@ -21,6 +21,10 @@
 	];
 	const ALL = ATTENTION.concat(['no_notice', 'no_doi']);
 
+	// A reference list without spacing, which OJS may normalise
+	const fingerprint = (lines) =>
+		lines.join('').replace(/[\s\\\u0085\u180E\uFEFF]/g, '');
+
 	function doiLink(doi) {
 		return h(
 			'a',
@@ -56,20 +60,22 @@
 			);
 			const {data, fetch} = useFetch(apiUrl, {method: 'POST'});
 			const isChecking = ref(false);
-			// Which version and reference list the report on screen belongs to
-			const checked = ref(null);
-			const current = () => `${props.publicationId}\n${props.references}`;
+			// The version the report on screen was asked for
+			const checkedPublicationId = ref(null);
 
-			// Never show results against another version or an edited list
-			watch(current, () => (checked.value = null));
+			// Never show one version's results against another
+			watch(
+				() => props.publicationId,
+				() => (checkedPublicationId.value = null),
+			);
 
 			async function check() {
-				const asked = current();
+				const publicationId = props.publicationId;
 				isChecking.value = true;
-				checked.value = null;
+				checkedPublicationId.value = null;
 				try {
 					await fetch();
-					checked.value = asked;
+					checkedPublicationId.value = publicationId;
 				} finally {
 					isChecking.value = false;
 				}
@@ -111,11 +117,19 @@
 
 			function results() {
 				const report = data.value;
-				if (!report || checked.value !== current()) {
+				if (!report || checkedPublicationId.value !== props.publicationId) {
 					return null;
 				}
 				if (!Array.isArray(report.references) || !report.summary) {
 					return h('p', t('plugins.generic.referenceCheck.error'));
+				}
+				// Show results only beside the very list that was checked. The page
+				// can lag behind a save, so this compares contents, not timing.
+				if (
+					fingerprint(report.references.map((r) => r.text)) !==
+					fingerprint([props.references])
+				) {
+					return h('p', t('plugins.generic.referenceCheck.stale'));
 				}
 				if (report.total === 0) {
 					return h('p', t('plugins.generic.referenceCheck.noReferences'));

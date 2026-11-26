@@ -21,6 +21,9 @@ msgstr "Checking..."
 msgid "plugins.generic.referenceCheck.error"
 msgstr "The check did not return a report, so nothing was checked."
 
+msgid "plugins.generic.referenceCheck.stale"
+msgstr "The saved reference list differs from the one checked. Check the references again."
+
 msgid "plugins.generic.referenceCheck.noReferences"
 msgstr "No references are saved for this version, so nothing was checked."
 

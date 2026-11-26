@@ -8,6 +8,7 @@
 	"plugins.generic.referenceCheck.limits",
 	"plugins.generic.referenceCheck.noReferences",
 	"plugins.generic.referenceCheck.reference",
+	"plugins.generic.referenceCheck.stale",
 	"plugins.generic.referenceCheck.status.check_failed",
 	"plugins.generic.referenceCheck.status.concern",
 	"plugins.generic.referenceCheck.status.corrected",
