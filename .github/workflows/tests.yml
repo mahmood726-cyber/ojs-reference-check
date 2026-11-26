@@ -1,11 +1,13 @@
 name: tests
-on: [push, pull_request]
+on: [push, workflow_dispatch]
 permissions:
   contents: read
 jobs:
   unit:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
+      fail-fast: false
       matrix:
         php: ['8.2', '8.3']
     steps:
@@ -15,8 +17,107 @@ jobs:
           php-version: ${{ matrix.php }}
           tools: phpunit:11
       - name: Check PHP syntax
-        run: find . -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Editor panel tests
+        run: |
+          for file in $(git ls-files '*.php'); do php -l "$file"; done
+      - name: Editor panel logic tests
         run: node --test tests/ui.test.cjs
-      - name: Unit tests
+      - name: Unit tests (PHPUnit)
         run: phpunit --bootstrap tests/bootstrap.php --do-not-cache-result tests/unit
+
+  # The release package installed in a real OJS with PKP's test journal
+  ojs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3']
+    env:
+      OJS_VERSION: 3.5.0-6
+      # Recorded from the first download; PKP publishes no checksum
+      OJS_SHA256: f5b85703b06e45cc82e56ef72b0a8f42a2f75237e5204dbd0146d9730a627c97
+      DATASETS_COMMIT: 32b457f4db44691e231abaf3c9aadbd90cd036be
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ojs-ci
+          MARIADB_DATABASE: ojs-ci
+          MARIADB_USER: ojs-ci
+          MARIADB_PASSWORD: ojs-ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: bcmath, curl, gd, intl, mbstring, mysqli, pdo_mysql, xml, zip
+
+      - uses: actions/cache@v4
+        id: ojs-cache
+        with:
+          path: ojs.tar.gz
+          key: ojs-${{ env.OJS_VERSION }}-${{ env.OJS_SHA256 }}
+      - name: Download OJS
+        if: steps.ojs-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sSfL --retry 3 -o ojs.tar.gz "https://pkp.sfu.ca/ojs/download/ojs-${OJS_VERSION}.tar.gz"
+      - name: Unpack OJS
+        run: |
+          echo "${OJS_SHA256}  ojs.tar.gz" | sha256sum --check
+          mkdir "$RUNNER_TEMP/ojs"
+          tar -xzf ojs.tar.gz -C "$RUNNER_TEMP/ojs" --strip-components=1
+
+      - name: Load PKP test journal
+        run: |
+          git clone --quiet --filter=blob:none --no-checkout https://github.com/pkp/datasets "$RUNNER_TEMP/datasets"
+          cd "$RUNNER_TEMP/datasets"
+          git sparse-checkout set ojs/stable-3_5_0/mariadb
+          git checkout --quiet "$DATASETS_COMMIT"
+          cd ojs/stable-3_5_0/mariadb
+          docker exec -i ${{ job.services.mariadb.id }} mariadb -uojs-ci -pojs-ci ojs-ci < database.sql
+          cp config.inc.php "$RUNNER_TEMP/ojs/"
+          cp -r files public "$RUNNER_TEMP/ojs/"
+          sed -i 's#^base_url = .*#base_url = "http://localhost:8000"#' "$RUNNER_TEMP/ojs/config.inc.php"
+
+      - name: Install the release package
+        run: |
+          git archive --format=tar.gz --prefix=referenceCheck/ -o "$RUNNER_TEMP/referenceCheck.tar.gz" HEAD
+          tar -xzf "$RUNNER_TEMP/referenceCheck.tar.gz" -C "$RUNNER_TEMP/ojs/plugins/generic"
+          cd "$RUNNER_TEMP/ojs"
+          php lib/pkp/tools/installPluginVersion.php plugins/generic/referenceCheck/version.xml
+
+      - name: Check the package against the OJS code
+        run: php tests/ojs-compat.php "$RUNNER_TEMP/ojs"
+
+      - name: Start OJS
+        run: |
+          cd "$RUNNER_TEMP/ojs"
+          PHP_CLI_SERVER_WORKERS=4 nohup php -d display_errors=0 -d log_errors=1 -S localhost:8000 \
+            > "$RUNNER_TEMP/ojs-server.log" 2>&1 &
+          curl --silent --fail --retry 30 --retry-delay 2 --retry-all-errors -o /dev/null \
+            http://localhost:8000/index.php/publicknowledge/en/login
+
+      - name: Browser tests
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Show plugin errors from the server log
+        if: always()
+        run: grep -iE "fatal|exception|referenceCheck.*(error|warning)" "$RUNNER_TEMP/ojs-server.log" | head -60 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ojs-php${{ matrix.php }}
+          path: |
+            tests/e2e/test-results
+            ${{ runner.temp }}/ojs-server.log
+          retention-days: 7

@@ -59,6 +59,11 @@ php tests/ojs-compat.php PATH   # against an unpacked OJS release (see the file)
 The test classes are PHPUnit test cases; `tests/run.php` is a small stand-in for
 machines without PHPUnit.
 
+The browser tests in `tests/e2e` install the release package in OJS with
+[PKP's test journal](https://github.com/pkp/datasets) and check the editor panel
+and the access rules. The GitHub workflow in `.github/workflows/tests.yml` sets
+up that site.
+
 To build a release package:
 ```bash
 git archive --format=tar.gz --prefix=referenceCheck/ -o referenceCheck-1.0.0.0.tar.gz HEAD

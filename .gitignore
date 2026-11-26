@@ -3,3 +3,7 @@ PROGRESS.md
 .phpunit*
 node_modules/
 vendor/
+tests/e2e/node_modules/
+tests/e2e/test-results/
+sentinel-findings.*
+STUCK_FAILURES.*
